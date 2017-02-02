@@ -6,11 +6,101 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.preprocessing import LabelEncoder
 from toolz import curry, map
+from ipywidgets import interactive, fixed, FloatSlider, IntSlider
+from ipywidgets import HBox, VBox
+from eden_prot import make_trimmed_ligand_protein_graph
 
 
-def draw_ligand(graph):
+def _interactive_display(structure, ligand_marker,
+                         min_conj=3.5,
+                         max_conj=5.5,
+                         max_disj=6,
+                         depth=2,
+                         inter_dist=4,
+                         v_ang=20, h_ang=20, size=10):
+    trimmed_ligand_protein_graph = make_trimmed_ligand_protein_graph(
+        structure, ligand_marker,
+        min_dist_conj=min_conj,
+        max_dist_conj=max_conj,
+        max_dist_disj=max_disj,
+        depth=depth,
+        interaction_distance_th=inter_dist)
+    plot3d(trimmed_ligand_protein_graph, vangle=v_ang, hangle=h_ang, size=size)
+
+
+def interactive_plot3d(structure, ligand_marker):
+    """interactive_display."""
+    w = interactive(
+        _interactive_display,
+        structure=fixed(structure), ligand_marker=fixed(ligand_marker),
+        min_conj=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=4.5, continuous_update=False),
+        max_conj=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=5.5, continuous_update=False),
+        max_disj=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=6.0, continuous_update=False),
+        depth=IntSlider(
+            min=0, max=5, step=1, value=2, continuous_update=False),
+        inter_dist=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=3.1, continuous_update=False),
+        v_ang=FloatSlider(
+            min=0.0, max=180.0, step=5.0, value=30, continuous_update=False),
+        h_ang=FloatSlider(
+            min=0.0, max=180.0, step=5.0, value=30, continuous_update=False),
+        size=IntSlider(
+            min=9, max=20, step=1, value=15, continuous_update=False))
+
+    int_w = VBox([HBox(w.children[3:5]),
+                  HBox(w.children[:3]),
+                  HBox(w.children[5:])])
+    return int_w
+
+
+def _interactive_draw_ligand_protein(structure, ligand_marker,
+                                     min_conj=3.5,
+                                     max_conj=5.5,
+                                     max_disj=6,
+                                     depth=2,
+                                     inter_dist=4,
+                                     size=10):
+    trimmed_ligand_protein_graph = make_trimmed_ligand_protein_graph(
+        structure, ligand_marker,
+        min_dist_conj=min_conj,
+        max_dist_conj=max_conj,
+        max_dist_disj=max_disj,
+        depth=depth,
+        interaction_distance_th=inter_dist)
+    draw_ligand_protein(trimmed_ligand_protein_graph, size=size)
+
+
+def interactive_draw_ligand_protein(structure, ligand_marker):
+    """interactive_draw_ligand_protein."""
+    w = interactive(
+        _interactive_draw_ligand_protein,
+        structure=fixed(structure),
+        ligand_marker=fixed(ligand_marker),
+        min_conj=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=4.5, continuous_update=False),
+        max_conj=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=5.5, continuous_update=False),
+        max_disj=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=6.0, continuous_update=False),
+        depth=IntSlider(
+            min=0, max=5, step=1, value=1, continuous_update=False),
+        inter_dist=FloatSlider(
+            min=1.0, max=8.0, step=0.1, value=3.1, continuous_update=False),
+        size=IntSlider(
+            min=20, max=70, step=1, value=60, continuous_update=False))
+
+    int_w = VBox([HBox(w.children[3:5]),
+                  HBox(w.children[:3]),
+                  HBox(w.children[5:])])
+    return int_w
+
+
+def draw_ligand(graph, size=70):
     """draw_ligand."""
-    display_params = dict(size=10,
+    display_params = dict(size=size,
                           edge_label='label',
                           vertex_label='label',
                           vertex_color='chain_id',
@@ -22,9 +112,9 @@ def draw_ligand(graph):
     draw_graph(graph, **display_params)
 
 
-def draw_protein(graph, vertex_color='chain_id'):
+def draw_protein(graph, vertex_color='chain_id', size=70):
     """draw_protein."""
-    display_params = dict(size=70,
+    display_params = dict(size=size,
                           edge_label=None,
                           vertex_label='label',
                           vertex_color=vertex_color,
@@ -37,9 +127,9 @@ def draw_protein(graph, vertex_color='chain_id'):
     draw_graph(graph, **display_params)
 
 
-def draw_ligand_protein(graph):
+def draw_ligand_protein(graph, size=70):
     """draw_ligand_protein."""
-    display_params = dict(size=70,
+    display_params = dict(size=size,
                           edge_label=None,
                           vertex_label='label',
                           vertex_color='contact',
@@ -109,9 +199,9 @@ def _extract_edge_coords(graph):
         end_z_coords
 
 
-def plot3d(graph, angle=0, vertex_color='label'):
+def plot3d(graph, hangle=30, vangle=30, size=20, vertex_color='label'):
     """plot3d."""
-    fig = plt.figure(figsize=(20, 20))
+    fig = plt.figure(figsize=(size, size))
     ax = fig.add_subplot(111, projection='3d')
     x_coords, y_coords, z_coords = _extract_node_coords(graph)
     edge_typeof, \
@@ -143,5 +233,5 @@ def plot3d(graph, angle=0, vertex_color='label'):
     colors = _extract_colors(graph, vertex_color)
     ax.scatter(x_coords, y_coords, z_coords, c=colors, s=40, cmap='RdBu')
 
-    ax.view_init(30, angle)
+    ax.view_init(vangle, hangle)
     plt.draw()
